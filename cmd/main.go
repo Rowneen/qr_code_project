@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"qr_code/internal/config"
-	"qr_code/internal/handls"
+	"qr_code/internal/handlers"
 
 	_ "github.com/mattn/go-sqlite3"
 )
