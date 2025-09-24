@@ -24,14 +24,13 @@ type HTTPServer struct {
 func MustLoad() *Config {
 	currentDir, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("ошибко пути: %s", err)
+		log.Fatalf("path error: %s", err)
 	}
 	configPath := filepath.Join(currentDir, "config", "local.yaml")
 	configPath = filepath.Clean(configPath)
 
 	if configPath == "" {
 		log.Fatal("CONFIG_PATH environment variable is not set")
-
 	}
 
 	if _, err := os.Stat(configPath); err != nil {
