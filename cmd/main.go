@@ -43,5 +43,5 @@ func main() {
 	log.Println("SUCCESS: Connected to database!")
 	fmt.Println("Also printing via fmt:", cfg)
 
-	handls.RegisterHandlers()
+	handlers.RegisterHandlers()
 }
