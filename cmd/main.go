@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"qr_code/internal/config"
-	"qr_code/internal/handlers"
+	http_handlers "qr_code/internal/handlers"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -43,5 +43,5 @@ func main() {
 	log.Println("SUCCESS: Connected to database!")
 	fmt.Println("Also printing via fmt:", cfg)
 
-	handlers.RegisterHandlers()
+	http_handlers.RegisterHandlers()
 }
