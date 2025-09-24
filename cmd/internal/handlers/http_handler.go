@@ -1,4 +1,4 @@
-package http_handler
+package handlers
 
 import (
 	"io"
@@ -18,7 +18,7 @@ func handler_auth(w http.ResponseWriter, r *http.Request) {
 }
 
 // регистрация хандлеров и запуск
-func RegisterHandlers() {
+func RegisterHTTPHandlers() {
 	http.HandleFunc("/auth", handler_auth)
 	http.ListenAndServe(":8080", nil)
 }
