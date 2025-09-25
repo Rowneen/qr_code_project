@@ -15,7 +15,7 @@ var (
 	db   *sql.DB
 	once sync.Once
 )
-
+// инициализация бд
 func MustInit() {
 	once.Do(func() {
 		cfg := config.Get()
