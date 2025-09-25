@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	_ "net/http"
 	"os"
@@ -13,9 +12,10 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var cfg = config.MustLoad()
-
 func main() {
+	config.MustLoad()
+	cfg := config.Get()
+
 	currentDir, err := os.Getwd()
 
 	if err != nil {
@@ -41,7 +41,6 @@ func main() {
 	}
 
 	log.Println("SUCCESS: Connected to database!")
-	fmt.Println("Also printing via fmt:", cfg)
 
 	handlers.RegisterHTTPHandlers()
 }

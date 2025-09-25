@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -21,27 +22,44 @@ type HTTPServer struct {
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
 }
 
+var (
+	instance *Config
+	once     sync.Once
+)
+
 func MustLoad() *Config {
-	currentDir, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("path error: %s", err)
-	}
-	configPath := filepath.Join(currentDir, "config", "local.yaml")
-	configPath = filepath.Clean(configPath)
+	once.Do(func() {
+		currentDir, err := os.Getwd()
+		if err != nil {
+			log.Fatalf("path error: %s", err)
+		}
+		configPath := filepath.Join(currentDir, "config", "local.yaml")
+		configPath = filepath.Clean(configPath)
 
-	if configPath == "" {
-		log.Fatal("CONFIG_PATH environment variable is not set")
-	}
+		if configPath == "" {
+			log.Fatal("configPath is empty")
+		}
 
-	if _, err := os.Stat(configPath); err != nil {
-		log.Fatalf("error opening config file: %s", err)
-	}
-	var cfg Config
+		if _, err := os.Stat(configPath); err != nil {
+			log.Fatalf("error opening config file: %s", err)
+		}
 
-	err = cleanenv.ReadConfig(configPath, &cfg)
-	if err != nil {
-		log.Fatalf("error reading config file: %s", err)
-	}
+		var cfg Config
+		err = cleanenv.ReadConfig(configPath, &cfg)
+		if err != nil {
+			log.Fatalf("error reading config file: %s", err)
+		}
 
-	return &cfg
+		instance = &cfg
+	})
+
+	return instance
+}
+
+// return global config instance
+func Get() *Config {
+	if instance == nil {
+		log.Fatal("config not initialized. call MustLoad()")
+	}
+	return instance
 }
