@@ -92,6 +92,7 @@ func handler_auth(w http.ResponseWriter, r *http.Request) {
 
 	// логика авторизации
 	db := database.Get()
+	// очистка паролей от спецсимволов
 	cleanLogin, cleanPassword := sanitizeInput(authRequest.Login), sanitizeInput(authRequest.Password)
 
 	var (
@@ -102,12 +103,13 @@ func handler_auth(w http.ResponseWriter, r *http.Request) {
 		Role     string
 		GroupId  sql.NullInt64
 	)
-
+	// запрос к бд
 	err := db.QueryRow(
-		"SELECT * FROM user WHERE Login = ? AND PassHash = ?",
+		"SELECT * FROM user WHERE Login = ? AND PassHash = ? LIMIT 1",
 		cleanLogin, md5Hash(cleanPassword),
 	).Scan(&id, &Login, &PassHash, &FullName, &Role, &GroupId)
 
+	// проверка на ошибку после запроса
 	if err != nil {
 		// log.Printf("db error: %s", err)
 		w.WriteHeader(http.StatusUnauthorized)
@@ -117,7 +119,7 @@ func handler_auth(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
+	// если сюда прошло - запрос корректно прошел
 	log.Printf("correct auth: %d, %s, %s, %s, %s, %d", id, Login, PassHash, FullName, Role, GroupId.Int64)
 	json.NewEncoder(w).Encode(AuthResponse{
 		Success: true,
