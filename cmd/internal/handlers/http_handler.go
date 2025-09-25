@@ -1,9 +1,14 @@
 package handlers
 
 import (
+	"crypto/md5"
+	"database/sql"
+	"encoding/hex"
 	"encoding/json"
+	"log"
 	"net/http"
 	"qr_code/internal/config"
+	"qr_code/internal/database"
 	"regexp"
 )
 
@@ -23,6 +28,19 @@ type AuthResponse struct {
 func isValidInput(input string) bool {
 	matched, _ := regexp.MatchString(`^[a-zA-Z0-9@.\-_]{3,50}$`, input)
 	return matched
+}
+
+// удалялка спецсимволов (на всякий случай)
+func sanitizeInput(input string) string {
+	// Удаляем все, кроме: букв, цифр, @, ., -, _
+	reg := regexp.MustCompile(`[^a-zA-Z0-9@.\-_]`)
+	return reg.ReplaceAllString(input, "")
+}
+
+// md5 от строки
+func md5Hash(input string) string {
+	hash := md5.Sum([]byte(input))
+	return hex.EncodeToString(hash[:])
 }
 
 // сами хандлеры обработчики
@@ -72,21 +90,39 @@ func handler_auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// заглушка
-	if authRequest.Login == "admin" && authRequest.Password == "password" {
-		response := AuthResponse{
-			Success: true,
-			Message: "Authentication successful",
-		}
-		json.NewEncoder(w).Encode(response)
-	} else {
-		response := AuthResponse{
+	// логика авторизации
+	db := database.Get()
+	cleanLogin, cleanPassword := sanitizeInput(authRequest.Login), sanitizeInput(authRequest.Password)
+
+	var (
+		id       int
+		Login    string
+		PassHash string
+		FullName string
+		Role     string
+		GroupId  sql.NullInt64
+	)
+
+	err := db.QueryRow(
+		"SELECT * FROM user WHERE Login = ? AND PassHash = ?",
+		cleanLogin, md5Hash(cleanPassword),
+	).Scan(&id, &Login, &PassHash, &FullName, &Role, &GroupId)
+
+	if err != nil {
+		// log.Printf("db error: %s", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(AuthResponse{
 			Success: false,
 			Message: "Invalid login or password",
-		}
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(response)
+		})
+		return
 	}
+
+	log.Printf("correct auth: %d, %s, %s, %s, %s, %d", id, Login, PassHash, FullName, Role, GroupId.Int64)
+	json.NewEncoder(w).Encode(AuthResponse{
+		Success: true,
+		Message: "Authentication successful",
+	})
 }
 
 // регистрация хандлеров и запуск
