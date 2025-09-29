@@ -18,11 +18,11 @@ type AuthRequest struct {
 
 // ответ
 type AuthResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	FullName string   `json:"fullname"`
-	Role string `json:"role"`
-	GroupId int `json:"groupid"`
+	Success  bool   `json:"success"`
+	Message  string `json:"message"`
+	FullName string `json:"fullname"`
+	Role     string `json:"role"`
+	GroupId  int    `json:"groupid"`
 }
 
 func handler_auth(w http.ResponseWriter, r *http.Request) {
@@ -104,24 +104,23 @@ func handler_auth(w http.ResponseWriter, r *http.Request) {
 		// если сюда прошло - запрос корректно прошел
 		log.Printf("correct auth: %d, %s, %s, %s, %s, %d", id, Login, PassHash, FullName, Role, GroupId.Int64)
 		json.NewEncoder(w).Encode(AuthResponse{
-			Success: true,
-			Message: "Authentication successful",
+			Success:  true,
+			Message:  "Authentication successful",
 			FullName: FullName,
-			Role: Role,
-			GroupId: int(GroupId.Int64),
+			Role:     Role,
+			GroupId:  int(GroupId.Int64),
 		})
-		
+
 	} else {
 		// если сюда прошло - запрос корректно прошел
 		log.Printf("correct auth: %d, %s, %s, %s, %s, %d", id, Login, PassHash, FullName, Role, GroupId.Int64)
 		json.NewEncoder(w).Encode(AuthResponse{
-			Success: true,
-			Message: "Authentication successful",
+			Success:  true,
+			Message:  "Authentication successful",
 			FullName: FullName,
-			Role: Role,
+			Role:     Role,
 		})
 
 	}
-
 
 }

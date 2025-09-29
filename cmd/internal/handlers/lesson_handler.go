@@ -70,7 +70,7 @@ func handler_lesson(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	
+
 	cleanName, cleanDate, cleanTypeLes := utils.CleanString(lessonRequest.NameLesson), utils.CleanString(lessonRequest.Date), utils.CleanString(lessonRequest.TypeLes)
 	qrToken := generateQrToken(cleanName, cleanDate, cleanTypeLes)
 
