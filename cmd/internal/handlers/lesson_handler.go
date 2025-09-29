@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"qr_code/internal/cipher"
 	"qr_code/internal/database"
 	"qr_code/internal/utils"
 )
@@ -69,10 +70,12 @@ func handler_lesson(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	qrToken := generateQrToken()
+	
+	cleanName, cleanDate, cleanTypeLes := utils.CleanString(lessonRequest.NameLesson), utils.CleanString(lessonRequest.Date), utils.CleanString(lessonRequest.TypeLes)
+	qrToken := generateQrToken(cleanName, cleanDate, cleanTypeLes)
+
 	// база данных логика
 	db := database.Get()
-	cleanName, cleanDate, cleanTypeLes := utils.CleanString(lessonRequest.NameLesson), utils.CleanString(lessonRequest.Date), utils.CleanString(lessonRequest.TypeLes)
 	result, err := db.Exec(`
         INSERT INTO lessons (NameLesson, Date, TypeLes, QtToken, IsActive, TeacherId) 
         VALUES (?, ?, ?, ?, ?, ?)`,
@@ -100,7 +103,8 @@ func handler_lesson(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func generateQrToken() string {
-    // генерация токена
-	return "писюн"
+func generateQrToken(name, date, typeLes string) string {
+	data := fmt.Sprintf("%s %s %s", name, date, typeLes)
+	encodedData := cipher.EncodeBase64(data)
+	return encodedData
 }
