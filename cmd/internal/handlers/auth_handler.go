@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"qr_code/internal/cipher"
+	"qr_code/internal/cookie"
 	"qr_code/internal/database"
 	"qr_code/internal/utils"
 )
@@ -109,8 +110,39 @@ func handler_auth(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
+	// если сюда прошло - запрос корректно прошел
+	authData := map[string]interface{}{
+		"user_id":   id,
+		"login":     Login,
+		"role":      Role,
+		"full_name": FullName,
+		"group_id":  GroupId.Int64,
+	}
+
+	encryptedCookie, err := cookie.EncryptCookie(authData)
+	if err != nil {
+		log.Printf("Failed to encrypt cookie: %v", err)
+		response := AuthResponse{
+			Success: false,
+			Message: "Failed to create session",
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    encryptedCookie,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		MaxAge:   86400,
+	})
+	log.Printf("Auth cookie set for user: %s [%s]", Login, encryptedCookie)
+
 	if Role == "Student" {
-		// если сюда прошло - запрос корректно прошел
 		log.Printf("correct auth: %d, %s, %s, %s, %s, %d", id, Login, PassHash, FullName, Role, GroupId.Int64)
 		json.NewEncoder(w).Encode(AuthResponse{
 			Success:  true,
@@ -121,7 +153,6 @@ func handler_auth(w http.ResponseWriter, r *http.Request) {
 		})
 
 	} else {
-		// если сюда прошло - запрос корректно прошел
 		log.Printf("correct auth: %d, %s, %s, %s, %s, %d", id, Login, PassHash, FullName, Role, GroupId.Int64)
 		json.NewEncoder(w).Encode(AuthResponse{
 			Success:  true,
@@ -131,5 +162,4 @@ func handler_auth(w http.ResponseWriter, r *http.Request) {
 		})
 
 	}
-
 }

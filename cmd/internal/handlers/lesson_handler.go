@@ -3,8 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"qr_code/internal/cipher"
+	"qr_code/internal/cookie"
 	"qr_code/internal/database"
 	"qr_code/internal/utils"
 )
@@ -38,18 +40,56 @@ func handler_lesson(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method != "POST" {
-		response := AuthResponse{
+		response := LessonResponse{
 			Success: false,
 			Message: "Only POST method allowed",
 		}
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+
+	// cookie check
+	sessionCookie, err := r.Cookie("session")
+	if err != nil {
+		response := LessonResponse{
+			Success: false,
+			Message: "Not authorized",
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// valid cookie check
+	userData, err := cookie.DecryptCookie(sessionCookie.Value)
+	if err != nil {
+		response := LessonResponse{
+			Success: false,
+			Message: "Invalid session: " + err.Error(),
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// role check
+	if userData["role"] != "Teacher" {
+		response := LessonResponse{
+			Success: false,
+			Message: "Access denied",
+		}
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	log.Printf("Teacher %s creating lesson", userData["login"])
+
 	var lessonRequest LessonRequest
 	decoder := json.NewDecoder(r.Body)
 	// проверка на невалидно переданный json (не получается распарсить)
 	if err := decoder.Decode(&lessonRequest); err != nil {
-		response := AuthResponse{
+		response := LessonResponse{
 			Success: false,
 			Message: "Invalid JSON format",
 		}
@@ -60,7 +100,7 @@ func handler_lesson(w http.ResponseWriter, r *http.Request) {
 
 	// проверка полей на пустоту
 	if lessonRequest.Date == "" || lessonRequest.TypeLes == "" || lessonRequest.TeacherId < 0 {
-		response := AuthResponse{
+		response := LessonResponse{
 			Success: false,
 			Message: "Input is empty",
 		}
@@ -71,7 +111,7 @@ func handler_lesson(w http.ResponseWriter, r *http.Request) {
 
 	// проверка полей на валидность по символам
 	if !utils.IsSafeString(lessonRequest.Date) || !utils.IsSafeString(lessonRequest.TypeLes) {
-		response := AuthResponse{
+		response := LessonResponse{
 			Success: false,
 			Message: "Input contains invalid characters. Only letters, numbers, @, ., -, _ are allowed (3-50 characters)",
 		}
@@ -86,7 +126,7 @@ func handler_lesson(w http.ResponseWriter, r *http.Request) {
 	// база данных логика
 	db := database.Get()
 	result, err := db.Exec(`
-        INSERT INTO lessons (NameLesson, Date, TypeLes, QtToken, IsActive, TeacherId) 
+        INSERT INTO lessons (NameLesson, Date, TypeLes, QrToken, IsActive, TeacherId) 
         VALUES (?, ?, ?, ?, ?, ?)`,
 		cleanName, cleanDate, cleanTypeLes, qrToken, lessonRequest.IsActive, lessonRequest.TeacherId,
 	)
