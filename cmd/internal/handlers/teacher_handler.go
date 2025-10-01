@@ -80,7 +80,7 @@ func handler_teacher_getinfo(w http.ResponseWriter, r *http.Request) {
 
 	db := database.Get()
 
-	// Получаем ВСЕ уроки учителя
+	// get all teacher lessons
 	rows, err := db.Query(`SELECT * FROM lessons WHERE TeacherId = ?`, userData["user_id"])
 	if err != nil {
 		response := TeacherInfoResponse{
@@ -95,19 +95,18 @@ func handler_teacher_getinfo(w http.ResponseWriter, r *http.Request) {
 
 	var lessons []Lesson
 
-	// Читаем все строки
+	// read all
 	for rows.Next() {
 		var lesson Lesson
 		err := rows.Scan(&lesson.ID, &lesson.NameLesson, &lesson.Date, &lesson.TypeLes, &lesson.QrToken, &lesson.IsActive, &lesson.TeacherId)
 		if err != nil {
-			// Логируем ошибку, но продолжаем обрабатывать другие строки
 			log.Printf("Error scanning lesson: %v\n", err)
 			continue
 		}
 		lessons = append(lessons, lesson)
 	}
 
-	// Проверяем ошибки после итерации
+	// check error iterations
 	if err = rows.Err(); err != nil {
 		response := TeacherInfoResponse{
 			Success: false,
@@ -117,16 +116,11 @@ func handler_teacher_getinfo(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-
-	// Формируем успешный ответ
 	response := TeacherInfoResponse{
-		Success: true,
-		Message: "Lessons retrieved successfully",
-		Lessons: lessons, // предполагая, что в TeacherInfoResponse есть поле Lessons
+		Success:  true,
+		Message:  "Lessons retrieved successfully",
+		FullName: userData["full_name"].(string),
+		Lessons:  lessons,
 	}
 	json.NewEncoder(w).Encode(response)
-
 }
-
-//		cleanLogin, cipher.MD5(cleanPassword),
-//	).Scan(&id, &Login, &PassHash, &FullName, &Role, &GroupId)

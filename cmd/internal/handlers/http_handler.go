@@ -22,6 +22,6 @@ func RegisterHTTPHandlers() {
 	// запуск обработчиков на функции
 	http.HandleFunc("/auth", handler_auth)
 	http.HandleFunc("/lessons", handler_lesson)
-
+	http.HandleFunc("/teacher/getInfo", handler_teacher_getinfo)
 	server.ListenAndServe()
 }

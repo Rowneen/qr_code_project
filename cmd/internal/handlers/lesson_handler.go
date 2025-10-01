@@ -25,7 +25,7 @@ type LessonRequest struct {
 type LessonResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
-	QrToken string `json:"qrToken,omitempty"` // добавляем поле для возврата QR токена
+	QrToken string `json:"qrToken,omitempty"`
 }
 
 func handler_lesson(w http.ResponseWriter, r *http.Request) {
