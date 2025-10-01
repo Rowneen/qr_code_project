@@ -23,5 +23,6 @@ func RegisterHTTPHandlers() {
 	http.HandleFunc("/auth", handler_auth)
 	http.HandleFunc("/lessons", handler_lesson)
 	http.HandleFunc("/teacher/getInfo", handler_teacher_getinfo)
+	http.HandleFunc("/student/getInfo", handler_student_getinfo)
 	server.ListenAndServe()
 }
