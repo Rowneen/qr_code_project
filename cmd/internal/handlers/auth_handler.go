@@ -162,4 +162,18 @@ func handler_auth(w http.ResponseWriter, r *http.Request) {
 		})
 
 	}
+
+}
+
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		MaxAge:   -1,
+	})
+
+	w.Write([]byte("Cookie deleted"))
 }
