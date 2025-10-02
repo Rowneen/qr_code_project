@@ -137,7 +137,7 @@ func handler_auth(w http.ResponseWriter, r *http.Request) {
 		Value:    encryptedCookie,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   true, // ?
 		MaxAge:   86400,
 	})
 	log.Printf("Auth cookie set for user: %s [%s]", Login, encryptedCookie)
