@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"qr_code/internal/cipher"
 	"qr_code/internal/cookie"
+	"qr_code/internal/cors"
 	"qr_code/internal/database"
 	"qr_code/internal/utils"
 )
@@ -28,9 +29,7 @@ type AuthResponse struct {
 
 func handler_auth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	cors.SetCORSHeaders(&w, r)
 	// 200
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -137,7 +136,7 @@ func handler_auth(w http.ResponseWriter, r *http.Request) {
 		Value:    encryptedCookie,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true, // ?
+		Secure:   false, // ?
 		MaxAge:   86400,
 	})
 	log.Printf("Auth cookie set for user: %s [%s]", Login, encryptedCookie)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"qr_code/internal/cookie"
+	"qr_code/internal/cors"
 )
 
 type StudentInfoResponse struct {
@@ -15,9 +16,7 @@ type StudentInfoResponse struct {
 
 func handler_student_getinfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	cors.SetCORSHeaders(&w, r)
 	// 200
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
