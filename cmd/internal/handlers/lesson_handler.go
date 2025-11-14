@@ -17,7 +17,6 @@ type LessonRequest struct {
 	NameLesson string `json:"name"`
 	Date       string `json:"date"`
 	TypeLes    string `json:"type"`
-	// QrToken(само генериться)
 	IsActive  bool `json:"isActive"`
 	TeacherId int  `json:"teacherId"`
 }
@@ -120,14 +119,13 @@ func handler_lesson(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cleanName, cleanDate, cleanTypeLes := utils.CleanString(lessonRequest.NameLesson), utils.CleanString(lessonRequest.Date), utils.CleanString(lessonRequest.TypeLes)
-	qrToken := generateQrToken(cleanName, cleanDate, cleanTypeLes)
 
 	// база данных логика
 	db := database.Get()
 	result, err := db.Exec(`
         INSERT INTO lessons (NameLesson, Date, TypeLes, QrToken, IsActive, TeacherId) 
         VALUES (?, ?, ?, ?, ?, ?)`,
-		cleanName, cleanDate, cleanTypeLes, qrToken, lessonRequest.IsActive, lessonRequest.TeacherId,
+		cleanName, cleanDate, cleanTypeLes, "", lessonRequest.IsActive, lessonRequest.TeacherId,
 	)
 
 	if err != nil {
@@ -143,6 +141,17 @@ func handler_lesson(w http.ResponseWriter, r *http.Request) {
 	// Получаем ID вставленной записи
 	id, _ := result.LastInsertId()
 
+	
+	qrToken := generateQrToken(id, cleanName, cleanDate, cleanTypeLes) 
+
+	_, _ = db.Exec(`
+    UPDATE lessons 
+    SET QrToken = ? 
+    WHERE id = ?`,
+    qrToken, id,
+)
+
+
 	response := LessonResponse{
 		Success: true,
 		Message: fmt.Sprintf("Lesson '%s' created successfully with ID: %d", cleanName, id),
@@ -151,8 +160,9 @@ func handler_lesson(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func generateQrToken(name, date, typeLes string) string {
-	data := fmt.Sprintf("%s %s %s", name, date, typeLes)
+func generateQrToken(id int64, name, date, typeLes string) string {
+	data := fmt.Sprintf("%d %s %s %s", id, name, date, typeLes)
 	encodedData := cipher.EncodeBase64(data)
-	return encodedData
+	return encodedData 
 }
+
