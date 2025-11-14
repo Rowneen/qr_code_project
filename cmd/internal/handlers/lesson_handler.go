@@ -139,19 +139,15 @@ func handler_lesson(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Получаем ID вставленной записи
-	id, _ := result.LastInsertId()
-
-	
+	id, _ := result.LastInsertId()	
 	qrToken := generateQrToken(id, cleanName, cleanDate, cleanTypeLes) 
 
 	_, _ = db.Exec(`
-    UPDATE lessons 
-    SET QrToken = ? 
-    WHERE id = ?`,
-    qrToken, id,
-)
-
-
+		UPDATE lessons 
+		SET QrToken = ? 
+		WHERE id = ?`,
+		qrToken, id,
+	)
 	response := LessonResponse{
 		Success: true,
 		Message: fmt.Sprintf("Lesson '%s' created successfully with ID: %d", cleanName, id),

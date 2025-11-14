@@ -19,7 +19,7 @@ func RegisterHTTPHandlers() {
 	http.HandleFunc("/student/getInfo", handler_student_getinfo)
 	http.HandleFunc("/logout", LogoutHandler)
 	// конфиг сервера
-	server := &http.Server{
+	httpServer := &http.Server{
 		Handler:      nil,
 		ReadTimeout:  cfg.HTTPServer.Timeout,
 		WriteTimeout: cfg.HTTPServer.Timeout,
@@ -27,16 +27,21 @@ func RegisterHTTPHandlers() {
 	}
 
 	go func() {
-		server.Addr = cfg.HTTPServer.HttpsAddress
-		log.Printf("Starting HTTPS server on %s\n", server.Addr)
-		err := server.ListenAndServeTLS("cert/server.crt", "cert/server.key")
+		httpsServer := &http.Server{
+			Handler:      nil,
+			ReadTimeout:  cfg.HTTPServer.Timeout,
+			WriteTimeout: cfg.HTTPServer.Timeout,
+			IdleTimeout:  cfg.HTTPServer.IdleTimeout,
+		}
+		httpsServer.Addr = cfg.HTTPServer.HttpsAddress
+		log.Printf("Starting HTTPS server on %s\n", httpsServer.Addr)
+		err := httpsServer.ListenAndServeTLS("cert/server.crt", "cert/server.key")
 		if err != nil {
 			log.Printf("HTTPS server error: %v", err)
 		}
 	}()
-
 	// HTTP сервер основной
-	server.Addr = cfg.HTTPServer.HttpAddress
-	log.Printf("Starting HTTP server on %s\n", server.Addr)
-	server.ListenAndServe()
+	httpServer.Addr = cfg.HTTPServer.HttpAddress
+	log.Printf("Starting HTTP server on %s\n", httpServer.Addr)
+	httpServer.ListenAndServe()
 }
