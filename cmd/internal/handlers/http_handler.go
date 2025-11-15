@@ -6,15 +6,13 @@ import (
 	"qr_code/internal/config"
 )
 
-// сами хандлеры обработчики
-// ...
-
 // регистрация хандлеров и запуск
 func RegisterHTTPHandlers() {
 	cfg := config.Get()
 	// запуск обработчиков на функции
 	http.HandleFunc("/auth", handler_auth)
-	http.HandleFunc("/lessons", handler_lesson)
+	http.HandleFunc("/lessons/create", handler_lessons_create)
+	http.HandleFunc("/lessons/mark", handler_lessons_mark)
 	http.HandleFunc("/teacher/getInfo", handler_teacher_getinfo)
 	http.HandleFunc("/student/getInfo", handler_student_getinfo)
 	http.HandleFunc("/logout", LogoutHandler)
@@ -26,6 +24,7 @@ func RegisterHTTPHandlers() {
 		IdleTimeout:  cfg.HTTPServer.IdleTimeout,
 	}
 
+	// HTTPS сервер
 	go func() {
 		httpsServer := &http.Server{
 			Handler:      nil,
@@ -40,6 +39,7 @@ func RegisterHTTPHandlers() {
 			log.Printf("HTTPS server error: %v", err)
 		}
 	}()
+
 	// HTTP сервер основной
 	httpServer.Addr = cfg.HTTPServer.HttpAddress
 	log.Printf("Starting HTTP server on %s\n", httpServer.Addr)
