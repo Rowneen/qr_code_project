@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"qr_code/internal/cookie"
 	"qr_code/internal/cors"
 	"qr_code/internal/database"
+	"strconv"
 )
 
 type Lesson struct {
@@ -24,6 +27,12 @@ type TeacherInfoResponse struct {
 	Message  string   `json:"message"`
 	FullName string   `json:"fullname"`
 	Lessons  []Lesson `json:"lessons"`
+}
+
+// ответ
+type GetAttendancesResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
 }
 
 func handler_teacher_getinfo(w http.ResponseWriter, r *http.Request) {
@@ -122,4 +131,167 @@ func handler_teacher_getinfo(w http.ResponseWriter, r *http.Request) {
 		Lessons:  lessons,
 	}
 	json.NewEncoder(w).Encode(response)
+}
+
+func handler_export_attendances(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	cors.SetCORSHeaders(&w, r)
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != "GET" {
+		response := TeacherInfoResponse{
+			Success: false,
+			Message: "Only GET method allowed",
+		}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	sessionCookie, err := r.Cookie("session")
+	if err != nil {
+		response := TeacherInfoResponse{
+			Success: false,
+			Message: "Not authorized",
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// valid cookie check
+	userData, err := cookie.DecryptCookie(sessionCookie.Value)
+	if err != nil {
+		response := TeacherInfoResponse{
+			Success: false,
+			Message: "Invalid session: " + err.Error(),
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// role check
+	if userData["role"] != "Teacher" {
+		response := TeacherInfoResponse{
+			Success: false,
+			Message: "Access denied",
+		}
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// проверка get параметра
+	lessonIdParam := r.URL.Query().Get("lessonId")
+	if lessonIdParam == "" {
+		response := GetAttendancesResponse{
+			Success: false,
+			Message: "Lesson ID is required",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	// конвертация в int
+	lessonId, err := strconv.Atoi(lessonIdParam)
+	if err != nil {
+		response := GetAttendancesResponse{
+			Success: false,
+			Message: "Invalid Lesson ID format",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	if lessonId <= 0 {
+		response := GetAttendancesResponse{
+			Success: false,
+			Message: "Lesson ID must be positive number",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	// логика бд
+	db := database.Get()
+
+	var teacherID int
+	var lessonName string
+	err = db.QueryRow(`
+		SELECT TeacherId, NameLesson 
+		FROM lessons 
+		WHERE id = ? AND TeacherId = ?
+	`, lessonId, int(userData["user_id"].(float64))).Scan(&teacherID, &lessonName)
+	fmt.Printf("[export] teacherID: %d, lessonName: %s\n", teacherID, lessonName)
+
+	if err != nil {
+		response := GetAttendancesResponse{
+			Success: false,
+			Message: "Lesson not found or access denied",
+		}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	// export request
+	rows, err := db.Query(`
+		SELECT 
+			user.FullName,
+			user.GroupId,
+			attendances.Status,
+			attendances.ConfirmedDate
+		FROM attendances
+		JOIN user ON attendances.StudentId = user.id
+		WHERE attendances.LessonId = ?
+		ORDER BY user.GroupId, user.FullName
+	`, lessonId)
+
+	if err != nil {
+		response := GetAttendancesResponse{
+			Success: false,
+			Message: "Database error: " + err.Error(),
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	defer rows.Close()
+
+	// csv form
+	csvContent := "\xEF\xBB\xBF"
+	csvContent += "ФИО;Группа;Статус;Дата подтверждения\n"
+
+	for rows.Next() {
+		var fullName string
+		var groupId int
+		var status int
+		var confirmedDate sql.NullTime
+
+		err := rows.Scan(&fullName, &groupId, &status, &confirmedDate)
+		if err != nil {
+			continue
+		}
+
+		statusText := "Присутствовал"
+		if status == 0 {
+			statusText = "Отсутствовал"
+		}
+
+		dateText := ""
+		if confirmedDate.Valid {
+			dateText = confirmedDate.Time.Format("2006-01-02 15:04:05")
+		}
+
+		csvContent += fmt.Sprintf("%s;%d;%s;%s\n", fullName, groupId, statusText, dateText)
+	}
+
+	// Меняем заголовки для CSV
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=attendances_%s.csv", lessonName))
+
+	// Пишем CSV в ответ
+	w.Write([]byte(csvContent))
 }
