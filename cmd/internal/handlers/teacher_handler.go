@@ -218,6 +218,7 @@ func handler_export_attendances(w http.ResponseWriter, r *http.Request) {
 	// логика бд
 	db := database.Get()
 
+	// запрос с проверкой айди учителя из куки на соответствие с айди учителя который создал пару в бд
 	var teacherID int
 	var lessonName string
 	err = db.QueryRow(`
@@ -236,7 +237,7 @@ func handler_export_attendances(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	// export request
+	// запрос на экспорт студентов которые посетили пару
 	rows, err := db.Query(`
 		SELECT 
 			user.FullName,
@@ -263,7 +264,7 @@ func handler_export_attendances(w http.ResponseWriter, r *http.Request) {
 	// csv form
 	csvContent := "\xEF\xBB\xBF"
 	csvContent += "ФИО;Группа;Статус;Дата подтверждения\n"
-
+	// формирование построчно
 	for rows.Next() {
 		var fullName string
 		var groupId int
@@ -274,24 +275,20 @@ func handler_export_attendances(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			continue
 		}
-
+		// говно уберите это
 		statusText := "Присутствовал"
 		if status == 0 {
 			statusText = "Отсутствовал"
 		}
-
 		dateText := ""
 		if confirmedDate.Valid {
 			dateText = confirmedDate.Time.Format("2006-01-02 15:04:05")
 		}
-
 		csvContent += fmt.Sprintf("%s;%d;%s;%s\n", fullName, groupId, statusText, dateText)
 	}
 
-	// Меняем заголовки для CSV
+	// хеадеры для csv файла
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=attendances_%s.csv", lessonName))
-
-	// Пишем CSV в ответ
 	w.Write([]byte(csvContent))
 }
