@@ -28,11 +28,6 @@ type LessonCreateResponse struct {
 	QrToken string `json:"qrToken,omitempty"`
 }
 
-// запрос mark
-type LessonMarkRequest struct {
-	QRToken string `json:"qrtoken"`
-}
-
 // ответ mark
 type LessonMarkResponse struct {
 	Success     bool   `json:"success"`
@@ -190,10 +185,10 @@ func handler_lessons_mark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method != "POST" {
+	if r.Method != "POST" && r.Method != "GET" {
 		response := LessonMarkResponse{
 			Success: false,
-			Message: "Only POST method allowed",
+			Message: "Only POST/GET method allowed",
 		}
 		json.NewEncoder(w).Encode(response)
 		return
@@ -234,19 +229,19 @@ func handler_lessons_mark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var lessonMarkRequest LessonMarkRequest
-	decoder := json.NewDecoder(r.Body)
-	// проверка на невалидно переданный json (не получается распарсить)
-	if err := decoder.Decode(&lessonMarkRequest); err != nil {
-		response := LessonCreateResponse{
+	q := r.URL.Query()
+	qrToken := q.Get("token")
+	if qrToken == "" {
+		response := LessonMarkResponse{
 			Success: false,
-			Message: "Invalid JSON format",
+			Message: "Missing token parameter",
 		}
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	token, err := qrtoken.Parse(lessonMarkRequest.QRToken)
+
+	token, err := qrtoken.Parse(qrToken)
 	if err != nil {
 		response := LessonMarkResponse{
 			Success: false,
