@@ -281,7 +281,7 @@ func handler_lessons_mark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("ID: %d, Lesson: %s, Teacher: %s\n", token.ID, token.Name, token.TeacherName)
+	log.Printf("ID: %d, Lesson: %s, Teacher: %s\n", token.ID, token.Name, token.TeacherName)
 	response := LessonMarkResponse{
 		Success:     true,
 		Message:     "Attendance marked successfully",
