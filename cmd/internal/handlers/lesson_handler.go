@@ -265,6 +265,36 @@ func handler_lessons_mark(w http.ResponseWriter, r *http.Request) {
 
 	// db insert
 	db := database.Get()
+
+	// check exists
+	var count int
+	err = db.QueryRow(`
+		SELECT COUNT(*) FROM attendances 
+		WHERE LessonId = ? AND StudentId = ?`,
+		token.ID, int64(studentID),
+	).Scan(&count)
+
+	if err != nil {
+		response := LessonMarkResponse{
+			Success: false,
+			Message: "Database error: " + err.Error(),
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// if exists
+	if count > 0 {
+		response := LessonMarkResponse{
+			Success: false,
+			Message: "Attendance already marked",
+		}
+		w.WriteHeader(http.StatusBadRequest) // 400
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	// not exist, add
 	_, err = db.Exec(`
 		INSERT INTO attendances (LessonId, StudentId, Status, ConfirmedDate) 
 		VALUES (?, ?, 1, datetime('now'))`,
