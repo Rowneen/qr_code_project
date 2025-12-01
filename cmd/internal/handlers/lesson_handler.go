@@ -287,8 +287,14 @@ func handler_lessons_mark(w http.ResponseWriter, r *http.Request) {
 	// if exists
 	if count > 0 {
 		response := LessonMarkResponse{
-			Success: false,
-			Message: "Attendance already marked",
+			Success:     false,
+			Message: 	 "Attendance already marked",
+			ID:          token.ID,
+			Name:        token.Name,
+			Date:        token.Date,
+			Type:        token.Type,
+			TeacherName: token.TeacherName,
+			Created:     token.Created,
 		}
 		w.WriteHeader(http.StatusBadRequest) // 400
 		json.NewEncoder(w).Encode(response)
