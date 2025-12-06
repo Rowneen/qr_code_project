@@ -17,8 +17,8 @@ type LessonCreateRequest struct {
 	NameLesson string `json:"name"`
 	Date       string `json:"date"`
 	TypeLes    string `json:"type"`
-	IsActive   bool   `json:"isActive"`
-	TeacherId  int    `json:"teacherId"`
+	// IsActive   bool   `json:"isActive"`
+	// TeacherId  int    `json:"teacherId"`
 }
 
 // ответ создание
@@ -106,8 +106,8 @@ func handler_lessons_create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// id in cookie != id in request
-	userID, ok := userData["user_id"].(float64)
-	if !ok || int(userID) != lessonCreateRequest.TeacherId {
+	userID, _ := userData["user_id"].(float64)
+	/*if !ok || int(userID) != lessonCreateRequest.TeacherId {
 		response := LessonCreateResponse{
 			Success: false,
 			Message: "Access denied",
@@ -115,12 +115,12 @@ func handler_lessons_create(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(response)
 		return
-	}
+	}*/
 
 	log.Printf("Teacher %s creating lesson", userData["login"])
 
 	// проверка полей на пустоту
-	if lessonCreateRequest.Date == "" || lessonCreateRequest.TypeLes == "" || lessonCreateRequest.TeacherId < 0 {
+	if lessonCreateRequest.Date == "" || lessonCreateRequest.TypeLes == "" || userID < 0 {
 		response := LessonCreateResponse{
 			Success: false,
 			Message: "Input is empty",
@@ -148,7 +148,7 @@ func handler_lessons_create(w http.ResponseWriter, r *http.Request) {
 	result, err := db.Exec(`
         INSERT INTO lessons (NameLesson, Date, TypeLes, QrToken, IsActive, TeacherId) 
         VALUES (?, ?, ?, ?, ?, ?)`,
-		cleanName, cleanDate, cleanTypeLes, "", lessonCreateRequest.IsActive, lessonCreateRequest.TeacherId,
+		cleanName, cleanDate, cleanTypeLes, "", true, userID,
 	)
 
 	if err != nil {
