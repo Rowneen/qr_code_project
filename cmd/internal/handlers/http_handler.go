@@ -20,6 +20,7 @@ func RegisterHTTPHandlers() {
 	//archive
 	http.HandleFunc("/archive/getLessons", handler_archive_getlessons)
 	http.HandleFunc("/archive/deleteLesson", handler_archive_deleteLesson)
+	http.HandleFunc("/archive/add", handler_archive_add)
 	// student
 	http.HandleFunc("/student/getInfo", handler_student_getinfo)
 	// logout

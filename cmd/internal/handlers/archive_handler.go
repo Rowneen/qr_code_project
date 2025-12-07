@@ -131,7 +131,7 @@ func handler_archive_deleteLesson(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	if r.Method != "POST" {
+	if r.Method != "POST" && r.Method != "GET" {
 		response := ArchiveInfoResponse{
 			Success: false,
 			Message: "Only POST method allowed",
@@ -250,6 +250,135 @@ func handler_archive_deleteLesson(w http.ResponseWriter, r *http.Request) {
 	response := ArchiveInfoResponse{
 		Success: true,
 		Message: "Lesson deleted successfully",
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+func handler_archive_add(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	cors.SetCORSHeaders(&w, r)
+	// 200
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.Method != "POST" && r.Method != "GET" {
+		response := ArchiveInfoResponse{
+			Success: false,
+			Message: "Only POST method allowed",
+		}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	// cookie check
+	sessionCookie, err := r.Cookie("session")
+	if err != nil {
+		response := ArchiveInfoResponse{
+			Success: false,
+			Message: "Not authorized",
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// valid cookie check
+	userData, err := cookie.DecryptCookie(sessionCookie.Value)
+	if err != nil {
+		response := ArchiveInfoResponse{
+			Success: false,
+			Message: "Invalid session: " + err.Error(),
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// role check
+	if userData["role"] != "Teacher" {
+		response := ArchiveInfoResponse{
+			Success: false,
+			Message: "Access denied",
+		}
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	lessonIdParam := r.URL.Query().Get("lessonId")
+	if lessonIdParam == "" {
+		response := ArchiveInfoResponse{
+			Success: false,
+			Message: "Lesson ID is required",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	// конвертация в int
+	lessonId, err := strconv.Atoi(lessonIdParam)
+	if err != nil {
+		response := ArchiveInfoResponse{
+			Success: false,
+			Message: "Invalid Lesson ID format",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	if lessonId <= 0 {
+		response := ArchiveInfoResponse{
+			Success: false,
+			Message: "Lesson ID must be positive number",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	db := database.Get()
+
+	var canArchive int
+	err = db.QueryRow(`SELECT COUNT(*) FROM lessons WHERE ID = ? AND TeacherId = ? AND IsActive = TRUE`,
+		lessonId, userData["user_id"]).Scan(&canArchive)
+	
+	if err != nil {
+		response := ArchiveInfoResponse{
+			Success: false,
+			Message: "Database error",
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	
+	if canArchive == 0 {
+		response := ArchiveInfoResponse{
+			Success: false,
+			Message: "Lesson not found, you are not the owner, or already archived",
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// add to archive
+	_, err = db.Exec(`UPDATE lessons SET IsActive = FALSE WHERE ID = ? AND TeacherId = ?`, 
+		lessonId, userData["user_id"])
+	
+	if err != nil {
+		response := ArchiveInfoResponse{
+			Success: false,
+			Message: "Failed to archive lesson",
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	response := ArchiveInfoResponse{
+		Success: true,
+		Message: "Lesson archived successfully",
 	}
 	json.NewEncoder(w).Encode(response)
 }
