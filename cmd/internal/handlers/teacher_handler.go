@@ -89,7 +89,7 @@ func handler_teacher_getinfo(w http.ResponseWriter, r *http.Request) {
 	db := database.Get()
 
 	// get all teacher lessons
-	rows, err := db.Query(`SELECT * FROM lessons WHERE TeacherId = ?`, userData["user_id"])
+	rows, err := db.Query(`SELECT * FROM lessons WHERE TeacherId = ? AND IsActive = TRUE`, userData["user_id"])
 	if err != nil {
 		response := TeacherInfoResponse{
 			Success: false,

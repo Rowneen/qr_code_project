@@ -11,11 +11,15 @@ func RegisterHTTPHandlers() {
 	cfg := config.Get()
 	// запуск обработчиков на функции
 	http.HandleFunc("/auth", handler_auth)
+	// lessons
 	http.HandleFunc("/lessons/create", handler_lessons_create)
 	http.HandleFunc("/lessons/mark", handler_lessons_mark)
+	// teacher
 	http.HandleFunc("/teacher/getInfo", handler_teacher_getinfo)
 	http.HandleFunc("/teacher/export", handler_export_attendances)
+	// student
 	http.HandleFunc("/student/getInfo", handler_student_getinfo)
+	// logout
 	http.HandleFunc("/logout", LogoutHandler)
 	// конфиг сервера
 	httpServer := &http.Server{
