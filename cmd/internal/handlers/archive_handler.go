@@ -21,9 +21,9 @@ type ArchiveLesson struct {
 }
 
 type ArchiveInfoResponse struct {
-	Success  bool     `json:"success"`
-	Message  string   `json:"message"`
-	Lessons  []ArchiveLesson `json:"lessons"`
+	Success bool            `json:"success"`
+	Message string          `json:"message"`
+	Lessons []ArchiveLesson `json:"lessons"`
 }
 
 func handler_archive_getlessons(w http.ResponseWriter, r *http.Request) {
@@ -116,9 +116,9 @@ func handler_archive_getlessons(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response := ArchiveInfoResponse{
-		Success:  true,
-		Message:  "Archive lessons retrieved successfully",
-		Lessons:  lessons,
+		Success: true,
+		Message: "Archive lessons retrieved successfully",
+		Lessons: lessons,
 	}
 	json.NewEncoder(w).Encode(response)
 }
@@ -131,10 +131,10 @@ func handler_archive_deleteLesson(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	if r.Method != "GET" {
+	if r.Method != "POST" {
 		response := ArchiveInfoResponse{
 			Success: false,
-			Message: "Only GET method allowed",
+			Message: "Only POST method allowed",
 		}
 		json.NewEncoder(w).Encode(response)
 		return
@@ -212,7 +212,7 @@ func handler_archive_deleteLesson(w http.ResponseWriter, r *http.Request) {
 	err = db.QueryRow(`
 		SELECT COUNT(*) FROM lessons WHERE ID = ? AND TeacherId = ? AND IsActive = FALSE`,
 		lessonId, userData["user_id"]).Scan(&canDelete)
-	
+
 	if err != nil {
 		response := ArchiveInfoResponse{
 			Success: false,
@@ -222,7 +222,7 @@ func handler_archive_deleteLesson(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	
+
 	if canDelete == 0 {
 		response := ArchiveInfoResponse{
 			Success: false,
@@ -234,9 +234,9 @@ func handler_archive_deleteLesson(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// delete
-	_, err = db.Exec(`DELETE FROM lessons WHERE ID = ? AND TeacherId = ?`, 
+	_, err = db.Exec(`DELETE FROM lessons WHERE ID = ? AND TeacherId = ?`,
 		lessonId, userData["user_id"])
-	
+
 	if err != nil {
 		response := ArchiveInfoResponse{
 			Success: false,
