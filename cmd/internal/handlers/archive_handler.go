@@ -234,13 +234,51 @@ func handler_archive_deleteLesson(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// delete
-	_, err = db.Exec(`DELETE FROM lessons WHERE ID = ? AND TeacherId = ?`,
-		lessonId, userData["user_id"])
-
+	tx, err := db.Begin()
 	if err != nil {
 		response := ArchiveInfoResponse{
 			Success: false,
+			Message: "Failed to start transaction",
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// delete attendances
+	_, err = tx.Exec(`DELETE FROM attendances WHERE LessonId = ?`, lessonId)
+	if err != nil {
+		tx.Rollback()
+		response := ArchiveInfoResponse{
+			Success: false,
+			Message: "Failed to delete attendance records",
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// delete lesson
+	_, err = tx.Exec(`DELETE FROM lessons WHERE ID = ? AND TeacherId = ?`,
+		lessonId, userData["user_id"])
+
+	if err != nil {
+		tx.Rollback()
+		response := ArchiveInfoResponse{
+			Success: false,
 			Message: "Failed to delete lesson",
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// commit transaction
+	err = tx.Commit()
+	if err != nil {
+		response := ArchiveInfoResponse{
+			Success: false,
+			Message: "Failed to commit transaction",
 		}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
