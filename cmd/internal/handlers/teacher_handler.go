@@ -389,10 +389,17 @@ func handler_export_attendances(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	// csv form
-	csvContent := "\xEF\xBB\xBF"
-	csvContent += "ФИО;Группа;Статус;Дата подтверждения\n"
-	// формирование построчно
+	// response struct
+	type AttendanceExport struct {
+		FullName        string `json:"fullName"`
+		GroupId         int    `json:"groupId"`
+		Status          string `json:"status"`
+		ConfirmedDate   string `json:"confirmedDate"`
+	}
+
+	var attendances []AttendanceExport
+
+	// формирование данных
 	for rows.Next() {
 		var fullName string
 		var groupId int
@@ -403,20 +410,44 @@ func handler_export_attendances(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			continue
 		}
-		// говно уберите это
+
 		statusText := "Присутствовал"
 		if status == 0 {
 			statusText = "Отсутствовал"
 		}
+		
 		dateText := ""
 		if confirmedDate.Valid {
 			dateText = confirmedDate.Time.Format("2006-01-02 15:04:05")
 		}
-		csvContent += fmt.Sprintf("%s;%d;%s;%s\n", fullName, groupId, statusText, dateText)
+
+		attendance := AttendanceExport{
+			FullName:      fullName,
+			GroupId:       groupId,
+			Status:        statusText,
+			ConfirmedDate: dateText,
+		}
+		
+		attendances = append(attendances, attendance)
 	}
 
-	// хеадеры для csv файла
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=attendances_%s.csv", lessonName))
-	w.Write([]byte(csvContent))
+	// response
+	response := struct {
+		Success    bool               `json:"success"`
+		Message    string             `json:"message"`
+		LessonName string             `json:"lessonName"`
+		LessonId   int                `json:"lessonId"`
+		Data       []AttendanceExport `json:"data"`
+		Count      int                `json:"count"`
+	}{
+		Success:    true,
+		Message:    "Attendances exported successfully",
+		LessonName: lessonName,
+		LessonId:   lessonId,
+		Data:       attendances,
+		Count:      len(attendances),
+	}
+
+	// Возвращаем JSON
+	json.NewEncoder(w).Encode(response)
 }
