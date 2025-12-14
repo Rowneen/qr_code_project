@@ -21,9 +21,10 @@ type ArchiveLesson struct {
 }
 
 type ArchiveInfoResponse struct {
-	Success bool            `json:"success"`
-	Message string          `json:"message"`
-	Lessons []ArchiveLesson `json:"lessons"`
+	Success  bool            `json:"success"`
+	Message  string          `json:"message"`
+	FullName string          `json:"fullname"`
+	Lessons  []ArchiveLesson `json:"lessons"`
 }
 
 func handler_archive_getlessons(w http.ResponseWriter, r *http.Request) {
@@ -116,9 +117,10 @@ func handler_archive_getlessons(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response := ArchiveInfoResponse{
-		Success: true,
-		Message: "Archive lessons retrieved successfully",
-		Lessons: lessons,
+		Success:  true,
+		Message:  "Archive lessons retrieved successfully",
+		FullName: userData["full_name"].(string),
+		Lessons:  lessons,
 	}
 	json.NewEncoder(w).Encode(response)
 }
@@ -379,7 +381,7 @@ func handler_archive_add(w http.ResponseWriter, r *http.Request) {
 	var canArchive int
 	err = db.QueryRow(`SELECT COUNT(*) FROM lessons WHERE ID = ? AND TeacherId = ? AND IsActive = TRUE`,
 		lessonId, userData["user_id"]).Scan(&canArchive)
-	
+
 	if err != nil {
 		response := ArchiveInfoResponse{
 			Success: false,
@@ -389,7 +391,7 @@ func handler_archive_add(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	
+
 	if canArchive == 0 {
 		response := ArchiveInfoResponse{
 			Success: false,
@@ -401,9 +403,9 @@ func handler_archive_add(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// add to archive
-	_, err = db.Exec(`UPDATE lessons SET IsActive = FALSE WHERE ID = ? AND TeacherId = ?`, 
+	_, err = db.Exec(`UPDATE lessons SET IsActive = FALSE WHERE ID = ? AND TeacherId = ?`,
 		lessonId, userData["user_id"])
-	
+
 	if err != nil {
 		response := ArchiveInfoResponse{
 			Success: false,
